@@ -1,0 +1,664 @@
+import React, { useState, useEffect } from 'react';
+import { Save, Plus, FileText, AlertCircle, User, Calendar, Clock, Search, CheckCircle, Eye, MapPin, Users, Share2 } from 'lucide-react';
+
+const STORAGE_KEY = 'arcturus_transmissions_shared';
+
+const ArcturusApp = () => {
+  const [activeTab, setActiveTab] = useState('nouvelle');
+  const [formData, setFormData] = useState({
+    type: 'observation',
+    usager: '',
+    date: new Date().toISOString().split('T')[0],
+    heure: new Date().toTimeString().slice(0,5),
+    itemConcerne: '',
+    redactionLibre: '',
+    lieuPrecis: '',
+    auteurPresume: '',
+    victimePresumee: '',
+    temoins: '',
+    contexte: '',
+    descriptionFaits: '',
+    actionsImmediates: '',
+    partagerAvec: []
+  });
+  const [transmissions, setTransmissions] = useState([]);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('tous');
+  const [currentUser] = useState('Etudiant ' + Math.floor(Math.random() * 100));
+
+  useEffect(() => {
+    const loadTransmissions = async () => {
+      try {
+        const stored = await window.storage.get(STORAGE_KEY, true);
+        if (stored && stored.value) {
+          setTransmissions(JSON.parse(stored.value));
+        }
+      } catch (error) {
+        console.log('Premiere utilisation');
+      }
+    };
+    loadTransmissions();
+  }, []);
+
+  const saveTransmissions = async (newTransmissions) => {
+    try {
+      await window.storage.set(STORAGE_KEY, JSON.stringify(newTransmissions), true);
+    } catch (error) {
+      console.error('Erreur de sauvegarde:', error);
+    }
+  };
+
+  const usagers = ['Jean D.', 'Marie L.', 'Pierre M.', 'Sophie R.', 'Lucas B.', 'Emma T.', 'Thomas V.'];
+  
+  const itemsConcernes = [
+    'Comportement',
+    'Autonomie', 
+    'Socialisation',
+    'Activites',
+    'Hygiene',
+    'Alimentation',
+    'Sommeil',
+    'Communication',
+    'Sante',
+    'Scolarite/Formation',
+    'Famille',
+    'Projet personnalise'
+  ];
+
+  const destinataires = [
+    'Direction',
+    'Chef de service',
+    'Coordinateur',
+    'Equipe educative',
+    'Maitresses de maison',
+    'Surveillants de nuit',
+    'Equipe medicale'
+  ];
+
+  const handlePartagerAvecToggle = (destinataire) => {
+    setFormData(prev => ({
+      ...prev,
+      partagerAvec: prev.partagerAvec.includes(destinataire)
+        ? prev.partagerAvec.filter(d => d !== destinataire)
+        : [...prev.partagerAvec, destinataire]
+    }));
+  };
+
+  const handleSubmit = async () => {
+    if (formData.type === 'observation') {
+      if (!formData.usager || !formData.itemConcerne || !formData.redactionLibre) {
+        alert('Veuillez remplir tous les champs obligatoires pour l\'observation');
+        return;
+      }
+    } else {
+      if (!formData.usager || !formData.heure || !formData.lieuPrecis || !formData.descriptionFaits) {
+        alert('Veuillez remplir tous les champs obligatoires pour l\'evenement indesirable');
+        return;
+      }
+    }
+
+    const newTransmission = {
+      id: Date.now(),
+      ...formData,
+      auteur: currentUser,
+      statut: 'en_attente',
+      dateCreation: new Date().toISOString()
+    };
+    
+    const updatedTransmissions = [newTransmission, ...transmissions];
+    setTransmissions(updatedTransmissions);
+    await saveTransmissions(updatedTransmissions);
+    
+    setFormData({
+      type: 'observation',
+      usager: '',
+      date: new Date().toISOString().split('T')[0],
+      heure: new Date().toTimeString().slice(0,5),
+      itemConcerne: '',
+      redactionLibre: '',
+      lieuPrecis: '',
+      auteurPresume: '',
+      victimePresumee: '',
+      temoins: '',
+      contexte: '',
+      descriptionFaits: '',
+      actionsImmediates: '',
+      partagerAvec: []
+    });
+    
+    setShowSuccess(true);
+    setTimeout(() => {
+      setShowSuccess(false);
+      setActiveTab('historique');
+    }, 2000);
+  };
+
+  const filteredTransmissions = transmissions.filter(t => {
+    const matchSearch = t.usager.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       (t.redactionLibre && t.redactionLibre.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                       (t.descriptionFaits && t.descriptionFaits.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchFilter = filterType === 'tous' || t.type === filterType;
+    return matchSearch && matchFilter;
+  });
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-gradient-to-r from-indigo-900 to-purple-900 text-white p-4 shadow-lg">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-white bg-opacity-20 p-2 rounded-lg">
+              <FileText size={32} />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold">Arcturus</h1>
+              <p className="text-sm text-indigo-200">Logiciel de Transmissions Educatives Partagees</p>
+            </div>
+          </div>
+          <div className="text-right text-sm bg-white bg-opacity-10 px-4 py-2 rounded-lg">
+            <p className="font-semibold">{currentUser}</p>
+            <p className="text-indigo-200">Mode Formation Collaborative</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex gap-1">
+            <button
+              onClick={() => setActiveTab('nouvelle')}
+              className={'px-6 py-3 font-medium transition-colors ' + (activeTab === 'nouvelle' ? 'bg-indigo-600 text-white border-b-2 border-indigo-600' : 'text-gray-600 hover:bg-gray-50')}
+            >
+              <Plus size={18} className="inline mr-2" />
+              Nouvelle transmission
+            </button>
+            <button
+              onClick={() => setActiveTab('historique')}
+              className={'px-6 py-3 font-medium transition-colors ' + (activeTab === 'historique' ? 'bg-indigo-600 text-white border-b-2 border-indigo-600' : 'text-gray-600 hover:bg-gray-50')}
+            >
+              <FileText size={18} className="inline mr-2" />
+              Historique partage ({transmissions.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('aide')}
+              className={'px-6 py-3 font-medium transition-colors ' + (activeTab === 'aide' ? 'bg-indigo-600 text-white border-b-2 border-indigo-600' : 'text-gray-600 hover:bg-gray-50')}
+            >
+              <AlertCircle size={18} className="inline mr-2" />
+              Aide et Recommandations
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {showSuccess && (
+        <div className="fixed top-20 right-4 bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 z-50">
+          <CheckCircle size={24} />
+          <div>
+            <p className="font-semibold">Transmission enregistree et partagee</p>
+            <p className="text-sm">Visible par tous les etudiants</p>
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-7xl mx-auto p-6">
+        {activeTab === 'nouvelle' && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Nouvelle transmission</h2>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Type de transmission *
+                </label>
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setFormData({...formData, type: 'observation'})}
+                    className={'flex-1 p-4 rounded-lg border-2 transition-all ' + (formData.type === 'observation' ? 'border-indigo-600 bg-indigo-50' : 'border-gray-300 hover:border-gray-400')}
+                  >
+                    <Eye className="mx-auto mb-2" size={24} />
+                    <p className="font-semibold">Observation</p>
+                    <p className="text-xs text-gray-600 mt-1">Faits objectifs du quotidien</p>
+                  </button>
+                  <button
+                    onClick={() => setFormData({...formData, type: 'evenement'})}
+                    className={'flex-1 p-4 rounded-lg border-2 transition-all ' + (formData.type === 'evenement' ? 'border-orange-600 bg-orange-50' : 'border-gray-300 hover:border-gray-400')}
+                  >
+                    <AlertCircle className="mx-auto mb-2" size={24} />
+                    <p className="font-semibold">Evenement indesirable</p>
+                    <p className="text-xs text-gray-600 mt-1">Incident, accident, situation critique</p>
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <User className="inline mr-1" size={16} />
+                    Personne concernee *
+                  </label>
+                  <select
+                    value={formData.usager}
+                    onChange={(e) => setFormData({...formData, usager: e.target.value})}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="">Selectionner...</option>
+                    {usagers.map(u => (
+                      <option key={u} value={u}>{u}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <Calendar className="inline mr-1" size={16} />
+                    Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => setFormData({...formData, date: e.target.value})}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              {formData.type === 'observation' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Item concerne (Type de transmission) *
+                    </label>
+                    <select
+                      value={formData.itemConcerne}
+                      onChange={(e) => setFormData({...formData, itemConcerne: e.target.value})}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    >
+                      <option value="">Selectionner un item...</option>
+                      {itemsConcernes.map(item => (
+                        <option key={item} value={item}>{item}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Redaction libre *
+                    </label>
+                    <textarea
+                      value={formData.redactionLibre}
+                      onChange={(e) => setFormData({...formData, redactionLibre: e.target.value})}
+                      rows={8}
+                      placeholder="Decrivez de maniere objective et factuelle vos observations..."
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Soyez factuel et objectif. Evitez les jugements de valeur.
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {formData.type === 'evenement' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <Clock className="inline mr-1" size={16} />
+                        Heure exacte *
+                      </label>
+                      <input
+                        type="time"
+                        value={formData.heure}
+                        onChange={(e) => setFormData({...formData, heure: e.target.value})}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <MapPin className="inline mr-1" size={16} />
+                        Lieu precis *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.lieuPrecis}
+                        onChange={(e) => setFormData({...formData, lieuPrecis: e.target.value})}
+                        placeholder="Ex: Salle a manger, Chambre 12..."
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Auteur presume
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.auteurPresume}
+                        onChange={(e) => setFormData({...formData, auteurPresume: e.target.value})}
+                        placeholder="Personne a l'origine de l'evenement"
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Victime presumee
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.victimePresumee}
+                        onChange={(e) => setFormData({...formData, victimePresumee: e.target.value})}
+                        placeholder="Personne affectee par l'evenement"
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <Users className="inline mr-1" size={16} />
+                      Temoins
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.temoins}
+                      onChange={(e) => setFormData({...formData, temoins: e.target.value})}
+                      placeholder="Noms des personnes presentes lors de l'evenement"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Contexte
+                    </label>
+                    <textarea
+                      value={formData.contexte}
+                      onChange={(e) => setFormData({...formData, contexte: e.target.value})}
+                      rows={3}
+                      placeholder="Elements de contexte : activite en cours, evenements precedents..."
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Description chronologique des faits *
+                    </label>
+                    <textarea
+                      value={formData.descriptionFaits}
+                      onChange={(e) => setFormData({...formData, descriptionFaits: e.target.value})}
+                      rows={6}
+                      placeholder="Decrivez precisement et chronologiquement ce qui s'est passe..."
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                    <p className="text-xs text-red-600 mt-1">
+                      Soyez tres precis et factuel. Cette description a une valeur juridique.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Actions immediates mises en place
+                    </label>
+                    <textarea
+                      value={formData.actionsImmediates}
+                      onChange={(e) => setFormData({...formData, actionsImmediates: e.target.value})}
+                      rows={4}
+                      placeholder="Interventions realisees, personnes prevenues, soins apportes..."
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  <Share2 className="inline mr-1" size={16} />
+                  Partager avec
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {destinataires.map(dest => (
+                    <label
+                      key={dest}
+                      className={'flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ' + (formData.partagerAvec.includes(dest) ? 'border-indigo-600 bg-indigo-50' : 'border-gray-300 hover:border-gray-400')}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.partagerAvec.includes(dest)}
+                        onChange={() => handlePartagerAvecToggle(dest)}
+                        className="w-4 h-4 text-indigo-600"
+                      />
+                      <span className="text-sm font-medium">{dest}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-4 border-t">
+                <button
+                  onClick={handleSubmit}
+                  className="flex-1 bg-indigo-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Save size={20} />
+                  Enregistrer et partager
+                </button>
+                <button
+                  onClick={() => setFormData({
+                    type: 'observation',
+                    usager: '',
+                    date: new Date().toISOString().split('T')[0],
+                    heure: new Date().toTimeString().slice(0,5),
+                    itemConcerne: '',
+                    redactionLibre: '',
+                    lieuPrecis: '',
+                    auteurPresume: '',
+                    victimePresumee: '',
+                    temoins: '',
+                    contexte: '',
+                    descriptionFaits: '',
+                    actionsImmediates: '',
+                    partagerAvec: []
+                  })}
+                  className="px-6 py-3 border-2 border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+                >
+                  Reinitialiser
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'historique' && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">Historique partage des transmissions</h2>
+              <div className="bg-indigo-100 text-indigo-800 px-4 py-2 rounded-lg font-semibold">
+                {transmissions.length} transmission(s)
+              </div>
+            </div>
+            
+            <div className="flex gap-4 mb-6">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-3 text-gray-400" size={20} />
+                <input
+                  type="text"
+                  placeholder="Rechercher par personne ou contenu..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="tous">Tous les types</option>
+                <option value="observation">Observations</option>
+                <option value="evenement">Evenements indesirables</option>
+              </select>
+            </div>
+
+            <div className="space-y-4">
+              {filteredTransmissions.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <FileText size={48} className="mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium">Aucune transmission pour le moment</p>
+                  <p className="text-sm">Creez la premiere transmission pour commencer</p>
+                </div>
+              ) : (
+                filteredTransmissions.map(t => (
+                  <div key={t.id} className="border-2 border-gray-200 rounded-lg p-5 hover:shadow-lg transition-all">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className={'p-3 rounded-lg ' + (t.type === 'observation' ? 'bg-indigo-100' : 'bg-orange-100')}>
+                          {t.type === 'observation' ? <Eye size={24} /> : <AlertCircle size={24} />}
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-lg">{t.usager}</h3>
+                          <p className="text-sm text-gray-600">
+                            {t.date} {t.type === 'evenement' && t.heure ? ' a ' + t.heure : ''}
+                            {t.type === 'observation' && t.itemConcerne ? ' - ' + t.itemConcerne : ''}
+                            {t.type === 'evenement' && t.lieuPrecis ? ' - ' + t.lieuPrecis : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className={'px-3 py-1 rounded-full text-xs font-semibold ' + (t.type === 'observation' ? 'bg-indigo-100 text-indigo-800' : 'bg-orange-100 text-orange-800')}>
+                          {t.type === 'observation' ? 'Observation' : 'Evenement'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {t.type === 'observation' && (
+                      <div className="bg-gray-50 rounded-lg p-4 mb-3">
+                        <p className="text-gray-800 whitespace-pre-line">{t.redactionLibre}</p>
+                      </div>
+                    )}
+
+                    {t.type === 'evenement' && (
+                      <div className="space-y-3">
+                        {t.auteurPresume && (
+                          <p className="text-sm"><strong>Auteur presume :</strong> {t.auteurPresume}</p>
+                        )}
+                        {t.victimePresumee && (
+                          <p className="text-sm"><strong>Victime presumee :</strong> {t.victimePresumee}</p>
+                        )}
+                        {t.temoins && (
+                          <p className="text-sm"><strong>Temoins :</strong> {t.temoins}</p>
+                        )}
+                        {t.contexte && (
+                          <div className="bg-gray-50 rounded p-3">
+                            <p className="text-xs font-semibold text-gray-600 mb-1">CONTEXTE</p>
+                            <p className="text-sm text-gray-800">{t.contexte}</p>
+                          </div>
+                        )}
+                        <div className="bg-orange-50 rounded p-3">
+                          <p className="text-xs font-semibold text-orange-600 mb-1">DESCRIPTION DES FAITS</p>
+                          <p className="text-sm text-gray-800 whitespace-pre-line">{t.descriptionFaits}</p>
+                        </div>
+                        {t.actionsImmediates && (
+                          <div className="bg-green-50 rounded p-3">
+                            <p className="text-xs font-semibold text-green-600 mb-1">ACTIONS IMMEDIATES</p>
+                            <p className="text-sm text-gray-800 whitespace-pre-line">{t.actionsImmediates}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+                      <p className="text-sm text-gray-600">
+                        <strong>Auteur :</strong> {t.auteur}
+                      </p>
+                      {t.partagerAvec && t.partagerAvec.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {t.partagerAvec.map(dest => (
+                            <span key={dest} className="text-xs bg-gray-200 px-2 py-1 rounded">
+                              {dest}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'aide' && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Aide et Recommandations professionnelles</h2>
+            
+            <div className="space-y-6">
+              <div className="bg-indigo-50 border-l-4 border-indigo-600 p-6 rounded-r-lg">
+                <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                  <Eye size={20} />
+                  Observation quotidienne
+                </h3>
+                <p className="mb-3 text-gray-700">
+                  L observation est un outil essentiel du travail educatif.
+                </p>
+                <div className="space-y-2 text-sm">
+                  <p><strong>A faire :</strong></p>
+                  <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700">
+                    <li>Decrire des faits observables et verifiables</li>
+                    <li>Utiliser un langage neutre et objectif</li>
+                    <li>Situer dans le temps et l espace</li>
+                    <li>Noter les comportements concrets</li>
+                  </ul>
+                  <p className="mt-3"><strong>A eviter :</strong></p>
+                  <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700">
+                    <li>Les jugements de valeur</li>
+                    <li>Les interpretations</li>
+                    <li>Les generalisations</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="bg-orange-50 border-l-4 border-orange-600 p-6 rounded-r-lg">
+                <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                  <AlertCircle size={20} />
+                  Evenement indesirable
+                </h3>
+                <p className="mb-3 text-gray-700">
+                  Un evenement indesirable necessite une tracabilite renforcee.
+                </p>
+                <div className="space-y-2 text-sm">
+                  <p><strong>Elements obligatoires :</strong></p>
+                  <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700">
+                    <li>Heure exacte et lieu precis</li>
+                    <li>Identification des personnes impliquees</li>
+                    <li>Description chronologique des faits</li>
+                    <li>Actions immediates mises en oeuvre</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="bg-green-50 border-l-4 border-green-600 p-6 rounded-r-lg">
+                <h3 className="font-bold text-lg mb-3">Exemples de formulations</h3>
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <p className="text-red-700 mb-1">Mauvais : Jean etait agressif</p>
+                    <p className="text-green-700">Bon : A 15h30, Jean a frappe du poing sur la table</p>
+                  </div>
+                  <div>
+                    <p className="text-red-700 mb-1">Mauvais : Marie ne fait jamais d efforts</p>
+                    <p className="text-green-700">Bon : Ce matin, Marie n a pas participe a l activite</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default ArcturusApp;
