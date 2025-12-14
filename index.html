@@ -1,664 +1,522 @@
-import React, { useState, useEffect } from 'react';
-import { Save, Plus, FileText, AlertCircle, User, Calendar, Clock, Search, CheckCircle, Eye, MapPin, Users, Share2 } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcturus - Logiciel de Transmissions Éducatives</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="app"></div>
 
-const STORAGE_KEY = 'arcturus_transmissions_shared';
+    <script type="module">
+        const STORAGE_KEY = 'arcturus_transmissions_shared_v2';
+        
+        let state = {
+            activeTab: 'nouvelle',
+            formData: {
+                type: 'observation',
+                usager: '',
+                date: new Date().toISOString().split('T')[0],
+                heure: new Date().toTimeString().slice(0,5),
+                itemConcerne: '',
+                redactionLibre: '',
+                lieuPrecis: '',
+                auteurPresume: '',
+                victimePresumee: '',
+                temoins: '',
+                contexte: '',
+                descriptionFaits: '',
+                actionsImmediates: '',
+                partagerAvec: []
+            },
+            transmissions: [],
+            showSuccess: false,
+            searchTerm: '',
+            filterType: 'tous',
+            currentUser: 'Étudiant ' + Math.floor(Math.random() * 100)
+        };
 
-const ArcturusApp = () => {
-  const [activeTab, setActiveTab] = useState('nouvelle');
-  const [formData, setFormData] = useState({
-    type: 'observation',
-    usager: '',
-    date: new Date().toISOString().split('T')[0],
-    heure: new Date().toTimeString().slice(0,5),
-    itemConcerne: '',
-    redactionLibre: '',
-    lieuPrecis: '',
-    auteurPresume: '',
-    victimePresumee: '',
-    temoins: '',
-    contexte: '',
-    descriptionFaits: '',
-    actionsImmediates: '',
-    partagerAvec: []
-  });
-  const [transmissions, setTransmissions] = useState([]);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('tous');
-  const [currentUser] = useState('Etudiant ' + Math.floor(Math.random() * 100));
+        const usagers = ['Jean D.', 'Marie L.', 'Pierre M.', 'Sophie R.', 'Lucas B.', 'Emma T.', 'Thomas V.'];
+        
+        const itemsConcernes = [
+            'Comportement', 'Autonomie', 'Socialisation', 'Activités', 'Hygiène',
+            'Alimentation', 'Sommeil', 'Communication', 'Santé', 'Scolarité/Formation',
+            'Famille', 'Projet personnalisé'
+        ];
 
-  useEffect(() => {
-    const loadTransmissions = async () => {
-      try {
-        const stored = await window.storage.get(STORAGE_KEY, true);
-        if (stored && stored.value) {
-          setTransmissions(JSON.parse(stored.value));
+        const destinataires = [
+            'Direction', 'Chef de service', 'Coordinateur', 'Équipe éducative',
+            'Maîtresses de maison', 'Surveillants de nuit', 'Équipe médicale'
+        ];
+
+        // Storage functions
+        function saveToStorage() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state.transmissions));
         }
-      } catch (error) {
-        console.log('Premiere utilisation');
-      }
-    };
-    loadTransmissions();
-  }, []);
 
-  const saveTransmissions = async (newTransmissions) => {
-    try {
-      await window.storage.set(STORAGE_KEY, JSON.stringify(newTransmissions), true);
-    } catch (error) {
-      console.error('Erreur de sauvegarde:', error);
-    }
-  };
+        function loadFromStorage() {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                state.transmissions = JSON.parse(stored);
+            }
+        }
 
-  const usagers = ['Jean D.', 'Marie L.', 'Pierre M.', 'Sophie R.', 'Lucas B.', 'Emma T.', 'Thomas V.'];
-  
-  const itemsConcernes = [
-    'Comportement',
-    'Autonomie', 
-    'Socialisation',
-    'Activites',
-    'Hygiene',
-    'Alimentation',
-    'Sommeil',
-    'Communication',
-    'Sante',
-    'Scolarite/Formation',
-    'Famille',
-    'Projet personnalise'
-  ];
-
-  const destinataires = [
-    'Direction',
-    'Chef de service',
-    'Coordinateur',
-    'Equipe educative',
-    'Maitresses de maison',
-    'Surveillants de nuit',
-    'Equipe medicale'
-  ];
-
-  const handlePartagerAvecToggle = (destinataire) => {
-    setFormData(prev => ({
-      ...prev,
-      partagerAvec: prev.partagerAvec.includes(destinataire)
-        ? prev.partagerAvec.filter(d => d !== destinataire)
-        : [...prev.partagerAvec, destinataire]
-    }));
-  };
-
-  const handleSubmit = async () => {
-    if (formData.type === 'observation') {
-      if (!formData.usager || !formData.itemConcerne || !formData.redactionLibre) {
-        alert('Veuillez remplir tous les champs obligatoires pour l\'observation');
-        return;
-      }
-    } else {
-      if (!formData.usager || !formData.heure || !formData.lieuPrecis || !formData.descriptionFaits) {
-        alert('Veuillez remplir tous les champs obligatoires pour l\'evenement indesirable');
-        return;
-      }
-    }
-
-    const newTransmission = {
-      id: Date.now(),
-      ...formData,
-      auteur: currentUser,
-      statut: 'en_attente',
-      dateCreation: new Date().toISOString()
-    };
-    
-    const updatedTransmissions = [newTransmission, ...transmissions];
-    setTransmissions(updatedTransmissions);
-    await saveTransmissions(updatedTransmissions);
-    
-    setFormData({
-      type: 'observation',
-      usager: '',
-      date: new Date().toISOString().split('T')[0],
-      heure: new Date().toTimeString().slice(0,5),
-      itemConcerne: '',
-      redactionLibre: '',
-      lieuPrecis: '',
-      auteurPresume: '',
-      victimePresumee: '',
-      temoins: '',
-      contexte: '',
-      descriptionFaits: '',
-      actionsImmediates: '',
-      partagerAvec: []
-    });
-    
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
-      setActiveTab('historique');
-    }, 2000);
-  };
-
-  const filteredTransmissions = transmissions.filter(t => {
-    const matchSearch = t.usager.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       (t.redactionLibre && t.redactionLibre.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                       (t.descriptionFaits && t.descriptionFaits.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchFilter = filterType === 'tous' || t.type === filterType;
-    return matchSearch && matchFilter;
-  });
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-gradient-to-r from-indigo-900 to-purple-900 text-white p-4 shadow-lg">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-white bg-opacity-20 p-2 rounded-lg">
-              <FileText size={32} />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">Arcturus</h1>
-              <p className="text-sm text-indigo-200">Logiciel de Transmissions Educatives Partagees</p>
-            </div>
-          </div>
-          <div className="text-right text-sm bg-white bg-opacity-10 px-4 py-2 rounded-lg">
-            <p className="font-semibold">{currentUser}</p>
-            <p className="text-indigo-200">Mode Formation Collaborative</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex gap-1">
-            <button
-              onClick={() => setActiveTab('nouvelle')}
-              className={'px-6 py-3 font-medium transition-colors ' + (activeTab === 'nouvelle' ? 'bg-indigo-600 text-white border-b-2 border-indigo-600' : 'text-gray-600 hover:bg-gray-50')}
-            >
-              <Plus size={18} className="inline mr-2" />
-              Nouvelle transmission
-            </button>
-            <button
-              onClick={() => setActiveTab('historique')}
-              className={'px-6 py-3 font-medium transition-colors ' + (activeTab === 'historique' ? 'bg-indigo-600 text-white border-b-2 border-indigo-600' : 'text-gray-600 hover:bg-gray-50')}
-            >
-              <FileText size={18} className="inline mr-2" />
-              Historique partage ({transmissions.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('aide')}
-              className={'px-6 py-3 font-medium transition-colors ' + (activeTab === 'aide' ? 'bg-indigo-600 text-white border-b-2 border-indigo-600' : 'text-gray-600 hover:bg-gray-50')}
-            >
-              <AlertCircle size={18} className="inline mr-2" />
-              Aide et Recommandations
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {showSuccess && (
-        <div className="fixed top-20 right-4 bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 z-50">
-          <CheckCircle size={24} />
-          <div>
-            <p className="font-semibold">Transmission enregistree et partagee</p>
-            <p className="text-sm">Visible par tous les etudiants</p>
-          </div>
-        </div>
-      )}
-
-      <div className="max-w-7xl mx-auto p-6">
-        {activeTab === 'nouvelle' && (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Nouvelle transmission</h2>
-            
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Type de transmission *
-                </label>
-                <div className="flex gap-4">
-                  <button
-                    onClick={() => setFormData({...formData, type: 'observation'})}
-                    className={'flex-1 p-4 rounded-lg border-2 transition-all ' + (formData.type === 'observation' ? 'border-indigo-600 bg-indigo-50' : 'border-gray-300 hover:border-gray-400')}
-                  >
-                    <Eye className="mx-auto mb-2" size={24} />
-                    <p className="font-semibold">Observation</p>
-                    <p className="text-xs text-gray-600 mt-1">Faits objectifs du quotidien</p>
-                  </button>
-                  <button
-                    onClick={() => setFormData({...formData, type: 'evenement'})}
-                    className={'flex-1 p-4 rounded-lg border-2 transition-all ' + (formData.type === 'evenement' ? 'border-orange-600 bg-orange-50' : 'border-gray-300 hover:border-gray-400')}
-                  >
-                    <AlertCircle className="mx-auto mb-2" size={24} />
-                    <p className="font-semibold">Evenement indesirable</p>
-                    <p className="text-xs text-gray-600 mt-1">Incident, accident, situation critique</p>
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    <User className="inline mr-1" size={16} />
-                    Personne concernee *
-                  </label>
-                  <select
-                    value={formData.usager}
-                    onChange={(e) => setFormData({...formData, usager: e.target.value})}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  >
-                    <option value="">Selectionner...</option>
-                    {usagers.map(u => (
-                      <option key={u} value={u}>{u}</option>
-                    ))}
-                  </select>
+        function render() {
+            const app = document.getElementById('app');
+            app.innerHTML = `
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-indigo-900 to-purple-900 text-white p-4 shadow-lg">
+                    <div class="max-w-7xl mx-auto flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-white bg-opacity-20 p-2 rounded-lg">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h1 class="text-3xl font-bold">Arcturus</h1>
+                                <p class="text-sm text-indigo-200">Logiciel de Transmissions Éducatives Partagées</p>
+                            </div>
+                        </div>
+                        <div class="text-right text-sm bg-white bg-opacity-10 px-4 py-2 rounded-lg">
+                            <p class="font-semibold">${state.currentUser}</p>
+                            <p class="text-indigo-200">Mode Formation Collaborative</p>
+                        </div>
+                    </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    <Calendar className="inline mr-1" size={16} />
-                    Date *
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData({...formData, date: e.target.value})}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
+                <!-- Navigation -->
+                <div class="bg-white border-b border-gray-200 shadow-sm">
+                    <div class="max-w-7xl mx-auto px-4">
+                        <div class="flex gap-1">
+                            <button onclick="changeTab('nouvelle')" class="px-6 py-3 font-medium transition-colors ${state.activeTab === 'nouvelle' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-50'}">
+                                ➕ Nouvelle transmission
+                            </button>
+                            <button onclick="changeTab('historique')" class="px-6 py-3 font-medium transition-colors ${state.activeTab === 'historique' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-50'}">
+                                📋 Historique partagé (${state.transmissions.length})
+                            </button>
+                            <button onclick="changeTab('aide')" class="px-6 py-3 font-medium transition-colors ${state.activeTab === 'aide' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-50'}">
+                                ℹ️ Aide & Recommandations
+                            </button>
+                        </div>
+                    </div>
                 </div>
-              </div>
 
-              {formData.type === 'observation' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Item concerne (Type de transmission) *
-                    </label>
-                    <select
-                      value={formData.itemConcerne}
-                      onChange={(e) => setFormData({...formData, itemConcerne: e.target.value})}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    >
-                      <option value="">Selectionner un item...</option>
-                      {itemsConcernes.map(item => (
-                        <option key={item} value={item}>{item}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Redaction libre *
-                    </label>
-                    <textarea
-                      value={formData.redactionLibre}
-                      onChange={(e) => setFormData({...formData, redactionLibre: e.target.value})}
-                      rows={8}
-                      placeholder="Decrivez de maniere objective et factuelle vos observations..."
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Soyez factuel et objectif. Evitez les jugements de valeur.
-                    </p>
-                  </div>
-                </>
-              )}
-
-              {formData.type === 'evenement' && (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
+                ${state.showSuccess ? `
+                <div class="fixed top-20 right-4 bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 z-50">
+                    <span class="text-2xl">✓</span>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        <Clock className="inline mr-1" size={16} />
-                        Heure exacte *
-                      </label>
-                      <input
-                        type="time"
-                        value={formData.heure}
-                        onChange={(e) => setFormData({...formData, heure: e.target.value})}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      />
+                        <p class="font-semibold">Transmission enregistrée et partagée</p>
+                        <p class="text-sm">Visible par tous les étudiants</p>
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- Content -->
+                <div class="max-w-7xl mx-auto p-6">
+                    ${state.activeTab === 'nouvelle' ? renderNouvelleTransmission() : ''}
+                    ${state.activeTab === 'historique' ? renderHistorique() : ''}
+                    ${state.activeTab === 'aide' ? renderAide() : ''}
+                </div>
+            `;
+        }
+
+        function renderNouvelleTransmission() {
+            return `
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Nouvelle transmission</h2>
+                    
+                    <!-- Type -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Type de transmission *</label>
+                        <div class="flex gap-4">
+                            <button onclick="setType('observation')" class="flex-1 p-4 rounded-lg border-2 transition-all ${state.formData.type === 'observation' ? 'border-indigo-600 bg-indigo-50' : 'border-gray-300'}">
+                                <span class="text-2xl">👁️</span>
+                                <p class="font-semibold">Observation</p>
+                                <p class="text-xs text-gray-600">Faits objectifs du quotidien</p>
+                            </button>
+                            <button onclick="setType('evenement')" class="flex-1 p-4 rounded-lg border-2 transition-all ${state.formData.type === 'evenement' ? 'border-orange-600 bg-orange-50' : 'border-gray-300'}">
+                                <span class="text-2xl">⚠️</span>
+                                <p class="font-semibold">Événement indésirable</p>
+                                <p class="text-xs text-gray-600">Incident, accident, situation critique</p>
+                            </button>
+                        </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        <MapPin className="inline mr-1" size={16} />
-                        Lieu precis *
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.lieuPrecis}
-                        onChange={(e) => setFormData({...formData, lieuPrecis: e.target.value})}
-                        placeholder="Ex: Salle a manger, Chambre 12..."
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Auteur presume
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.auteurPresume}
-                        onChange={(e) => setFormData({...formData, auteurPresume: e.target.value})}
-                        placeholder="Personne a l'origine de l'evenement"
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Victime presumee
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.victimePresumee}
-                        onChange={(e) => setFormData({...formData, victimePresumee: e.target.value})}
-                        placeholder="Personne affectee par l'evenement"
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      <Users className="inline mr-1" size={16} />
-                      Temoins
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.temoins}
-                      onChange={(e) => setFormData({...formData, temoins: e.target.value})}
-                      placeholder="Noms des personnes presentes lors de l'evenement"
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Contexte
-                    </label>
-                    <textarea
-                      value={formData.contexte}
-                      onChange={(e) => setFormData({...formData, contexte: e.target.value})}
-                      rows={3}
-                      placeholder="Elements de contexte : activite en cours, evenements precedents..."
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Description chronologique des faits *
-                    </label>
-                    <textarea
-                      value={formData.descriptionFaits}
-                      onChange={(e) => setFormData({...formData, descriptionFaits: e.target.value})}
-                      rows={6}
-                      placeholder="Decrivez precisement et chronologiquement ce qui s'est passe..."
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                    <p className="text-xs text-red-600 mt-1">
-                      Soyez tres precis et factuel. Cette description a une valeur juridique.
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Actions immediates mises en place
-                    </label>
-                    <textarea
-                      value={formData.actionsImmediates}
-                      onChange={(e) => setFormData({...formData, actionsImmediates: e.target.value})}
-                      rows={4}
-                      placeholder="Interventions realisees, personnes prevenues, soins apportes..."
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                  </div>
-                </>
-              )}
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
-                  <Share2 className="inline mr-1" size={16} />
-                  Partager avec
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {destinataires.map(dest => (
-                    <label
-                      key={dest}
-                      className={'flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ' + (formData.partagerAvec.includes(dest) ? 'border-indigo-600 bg-indigo-50' : 'border-gray-300 hover:border-gray-400')}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={formData.partagerAvec.includes(dest)}
-                        onChange={() => handlePartagerAvecToggle(dest)}
-                        className="w-4 h-4 text-indigo-600"
-                      />
-                      <span className="text-sm font-medium">{dest}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex gap-4 pt-4 border-t">
-                <button
-                  onClick={handleSubmit}
-                  className="flex-1 bg-indigo-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
-                >
-                  <Save size={20} />
-                  Enregistrer et partager
-                </button>
-                <button
-                  onClick={() => setFormData({
-                    type: 'observation',
-                    usager: '',
-                    date: new Date().toISOString().split('T')[0],
-                    heure: new Date().toTimeString().slice(0,5),
-                    itemConcerne: '',
-                    redactionLibre: '',
-                    lieuPrecis: '',
-                    auteurPresume: '',
-                    victimePresumee: '',
-                    temoins: '',
-                    contexte: '',
-                    descriptionFaits: '',
-                    actionsImmediates: '',
-                    partagerAvec: []
-                  })}
-                  className="px-6 py-3 border-2 border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
-                >
-                  Reinitialiser
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'historique' && (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-800">Historique partage des transmissions</h2>
-              <div className="bg-indigo-100 text-indigo-800 px-4 py-2 rounded-lg font-semibold">
-                {transmissions.length} transmission(s)
-              </div>
-            </div>
-            
-            <div className="flex gap-4 mb-6">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 text-gray-400" size={20} />
-                <input
-                  type="text"
-                  placeholder="Rechercher par personne ou contenu..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                />
-              </div>
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                <option value="tous">Tous les types</option>
-                <option value="observation">Observations</option>
-                <option value="evenement">Evenements indesirables</option>
-              </select>
-            </div>
-
-            <div className="space-y-4">
-              {filteredTransmissions.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
-                  <FileText size={48} className="mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium">Aucune transmission pour le moment</p>
-                  <p className="text-sm">Creez la premiere transmission pour commencer</p>
-                </div>
-              ) : (
-                filteredTransmissions.map(t => (
-                  <div key={t.id} className="border-2 border-gray-200 rounded-lg p-5 hover:shadow-lg transition-all">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className={'p-3 rounded-lg ' + (t.type === 'observation' ? 'bg-indigo-100' : 'bg-orange-100')}>
-                          {t.type === 'observation' ? <Eye size={24} /> : <AlertCircle size={24} />}
+                    <!-- Champs communs -->
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">👤 Personne concernée *</label>
+                            <select id="usager" class="w-full p-3 border border-gray-300 rounded-lg">
+                                <option value="">Sélectionner...</option>
+                                ${usagers.map(u => `<option value="${u}" ${state.formData.usager === u ? 'selected' : ''}>${u}</option>`).join('')}
+                            </select>
                         </div>
                         <div>
-                          <h3 className="font-bold text-lg">{t.usager}</h3>
-                          <p className="text-sm text-gray-600">
-                            {t.date} {t.type === 'evenement' && t.heure ? ' a ' + t.heure : ''}
-                            {t.type === 'observation' && t.itemConcerne ? ' - ' + t.itemConcerne : ''}
-                            {t.type === 'evenement' && t.lieuPrecis ? ' - ' + t.lieuPrecis : ''}
-                          </p>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">📅 Date *</label>
+                            <input type="date" id="date" value="${state.formData.date}" class="w-full p-3 border border-gray-300 rounded-lg">
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <span className={'px-3 py-1 rounded-full text-xs font-semibold ' + (t.type === 'observation' ? 'bg-indigo-100 text-indigo-800' : 'bg-orange-100 text-orange-800')}>
-                          {t.type === 'observation' ? 'Observation' : 'Evenement'}
-                        </span>
-                      </div>
                     </div>
 
-                    {t.type === 'observation' && (
-                      <div className="bg-gray-50 rounded-lg p-4 mb-3">
-                        <p className="text-gray-800 whitespace-pre-line">{t.redactionLibre}</p>
-                      </div>
-                    )}
-
-                    {t.type === 'evenement' && (
-                      <div className="space-y-3">
-                        {t.auteurPresume && (
-                          <p className="text-sm"><strong>Auteur presume :</strong> {t.auteurPresume}</p>
-                        )}
-                        {t.victimePresumee && (
-                          <p className="text-sm"><strong>Victime presumee :</strong> {t.victimePresumee}</p>
-                        )}
-                        {t.temoins && (
-                          <p className="text-sm"><strong>Temoins :</strong> {t.temoins}</p>
-                        )}
-                        {t.contexte && (
-                          <div className="bg-gray-50 rounded p-3">
-                            <p className="text-xs font-semibold text-gray-600 mb-1">CONTEXTE</p>
-                            <p className="text-sm text-gray-800">{t.contexte}</p>
-                          </div>
-                        )}
-                        <div className="bg-orange-50 rounded p-3">
-                          <p className="text-xs font-semibold text-orange-600 mb-1">DESCRIPTION DES FAITS</p>
-                          <p className="text-sm text-gray-800 whitespace-pre-line">{t.descriptionFaits}</p>
+                    ${state.formData.type === 'observation' ? `
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Item concerné *</label>
+                            <select id="itemConcerne" class="w-full p-3 border border-gray-300 rounded-lg">
+                                <option value="">Sélectionner...</option>
+                                ${itemsConcernes.map(i => `<option value="${i}" ${state.formData.itemConcerne === i ? 'selected' : ''}>${i}</option>`).join('')}
+                            </select>
                         </div>
-                        {t.actionsImmediates && (
-                          <div className="bg-green-50 rounded p-3">
-                            <p className="text-xs font-semibold text-green-600 mb-1">ACTIONS IMMEDIATES</p>
-                            <p className="text-sm text-gray-800 whitespace-pre-line">{t.actionsImmediates}</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
-                      <p className="text-sm text-gray-600">
-                        <strong>Auteur :</strong> {t.auteur}
-                      </p>
-                      {t.partagerAvec && t.partagerAvec.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {t.partagerAvec.map(dest => (
-                            <span key={dest} className="text-xs bg-gray-200 px-2 py-1 rounded">
-                              {dest}
-                            </span>
-                          ))}
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Rédaction libre *</label>
+                            <textarea id="redactionLibre" rows="8" placeholder="Décrivez de manière objective et factuelle vos observations..." class="w-full p-3 border border-gray-300 rounded-lg">${state.formData.redactionLibre}</textarea>
+                            <p class="text-xs text-gray-500 mt-1">Soyez factuel et objectif. Évitez les jugements de valeur.</p>
                         </div>
-                      )}
+                    ` : `
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">🕐 Heure exacte *</label>
+                                <input type="time" id="heure" value="${state.formData.heure}" class="w-full p-3 border border-gray-300 rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">📍 Lieu précis *</label>
+                                <input type="text" id="lieuPrecis" value="${state.formData.lieuPrecis}" placeholder="Ex: Salle à manger..." class="w-full p-3 border border-gray-300 rounded-lg">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Auteur présumé</label>
+                                <input type="text" id="auteurPresume" value="${state.formData.auteurPresume}" class="w-full p-3 border border-gray-300 rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Victime présumée</label>
+                                <input type="text" id="victimePresumee" value="${state.formData.victimePresumee}" class="w-full p-3 border border-gray-300 rounded-lg">
+                            </div>
+                        </div>
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">👥 Témoins</label>
+                            <input type="text" id="temoins" value="${state.formData.temoins}" class="w-full p-3 border border-gray-300 rounded-lg">
+                        </div>
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Contexte</label>
+                            <textarea id="contexte" rows="3" class="w-full p-3 border border-gray-300 rounded-lg">${state.formData.contexte}</textarea>
+                        </div>
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Description chronologique des faits *</label>
+                            <textarea id="descriptionFaits" rows="6" class="w-full p-3 border border-gray-300 rounded-lg">${state.formData.descriptionFaits}</textarea>
+                            <p class="text-xs text-red-600 mt-1">⚠️ Soyez très précis et factuel. Cette description a une valeur juridique.</p>
+                        </div>
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Actions immédiates</label>
+                            <textarea id="actionsImmediates" rows="4" class="w-full p-3 border border-gray-300 rounded-lg">${state.formData.actionsImmediates}</textarea>
+                        </div>
+                    `}
+
+                    <!-- Partager avec -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-semibold text-gray-700 mb-3">🔗 Partager avec</label>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            ${destinataires.map(d => `
+                                <label class="flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer ${state.formData.partagerAvec.includes(d) ? 'border-indigo-600 bg-indigo-50' : 'border-gray-300'}">
+                                    <input type="checkbox" ${state.formData.partagerAvec.includes(d) ? 'checked' : ''} onchange="togglePartager('${d}')" class="w-4 h-4">
+                                    <span class="text-sm font-medium">${d}</span>
+                                </label>
+                            `).join('')}
+                        </div>
                     </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
 
-        {activeTab === 'aide' && (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Aide et Recommandations professionnelles</h2>
-            
-            <div className="space-y-6">
-              <div className="bg-indigo-50 border-l-4 border-indigo-600 p-6 rounded-r-lg">
-                <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
-                  <Eye size={20} />
-                  Observation quotidienne
-                </h3>
-                <p className="mb-3 text-gray-700">
-                  L observation est un outil essentiel du travail educatif.
-                </p>
-                <div className="space-y-2 text-sm">
-                  <p><strong>A faire :</strong></p>
-                  <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700">
-                    <li>Decrire des faits observables et verifiables</li>
-                    <li>Utiliser un langage neutre et objectif</li>
-                    <li>Situer dans le temps et l espace</li>
-                    <li>Noter les comportements concrets</li>
-                  </ul>
-                  <p className="mt-3"><strong>A eviter :</strong></p>
-                  <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700">
-                    <li>Les jugements de valeur</li>
-                    <li>Les interpretations</li>
-                    <li>Les generalisations</li>
-                  </ul>
+                    <div class="flex gap-4 pt-4 border-t">
+                        <button onclick="submitForm()" class="flex-1 bg-indigo-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-indigo-700">
+                            💾 Enregistrer et partager
+                        </button>
+                        <button onclick="resetForm()" class="px-6 py-3 border-2 border-gray-300 rounded-lg font-semibold hover:bg-gray-50">
+                            Réinitialiser
+                        </button>
+                    </div>
                 </div>
-              </div>
+            `;
+        }
 
-              <div className="bg-orange-50 border-l-4 border-orange-600 p-6 rounded-r-lg">
-                <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
-                  <AlertCircle size={20} />
-                  Evenement indesirable
-                </h3>
-                <p className="mb-3 text-gray-700">
-                  Un evenement indesirable necessite une tracabilite renforcee.
-                </p>
-                <div className="space-y-2 text-sm">
-                  <p><strong>Elements obligatoires :</strong></p>
-                  <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700">
-                    <li>Heure exacte et lieu precis</li>
-                    <li>Identification des personnes impliquees</li>
-                    <li>Description chronologique des faits</li>
-                    <li>Actions immediates mises en oeuvre</li>
-                  </ul>
+        function renderHistorique() {
+            const filtered = state.transmissions.filter(t => {
+                const matchSearch = t.usager.toLowerCase().includes(state.searchTerm.toLowerCase()) ||
+                                   (t.redactionLibre && t.redactionLibre.toLowerCase().includes(state.searchTerm.toLowerCase())) ||
+                                   (t.descriptionFaits && t.descriptionFaits.toLowerCase().includes(state.searchTerm.toLowerCase()));
+                const matchFilter = state.filterType === 'tous' || t.type === state.filterType;
+                return matchSearch && matchFilter;
+            });
+
+            return `
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800">Historique partagé des transmissions</h2>
+                        <div class="bg-indigo-100 text-indigo-800 px-4 py-2 rounded-lg font-semibold">
+                            ${state.transmissions.length} transmission(s)
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-4 mb-6">
+                        <input type="text" placeholder="Rechercher..." id="searchInput" value="${state.searchTerm}" 
+                            onkeyup="updateSearch(this.value)" class="flex-1 p-3 border rounded-lg">
+                        <select id="filterSelect" onchange="updateFilter(this.value)" class="p-3 border rounded-lg">
+                            <option value="tous" ${state.filterType === 'tous' ? 'selected' : ''}>Tous</option>
+                            <option value="observation" ${state.filterType === 'observation' ? 'selected' : ''}>Observations</option>
+                            <option value="evenement" ${state.filterType === 'evenement' ? 'selected' : ''}>Événements</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-4">
+                        ${filtered.length === 0 ? `
+                            <div class="text-center py-12 text-gray-500">
+                                <p class="text-lg font-medium">Aucune transmission pour le moment</p>
+                            </div>
+                        ` : filtered.map(t => `
+                            <div class="border-2 border-gray-200 rounded-lg p-5 hover:shadow-lg transition-all">
+                                <div class="flex items-start justify-between mb-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="p-3 rounded-lg ${t.type === 'observation' ? 'bg-indigo-100' : 'bg-orange-100'}">
+                                            ${t.type === 'observation' ? '👁️' : '⚠️'}
+                                        </div>
+                                        <div>
+                                            <h3 class="font-bold text-lg">${t.usager}</h3>
+                                            <p class="text-sm text-gray-600">
+                                                ${t.date} ${t.type === 'evenement' && t.heure ? ' à ' + t.heure : ''}
+                                                ${t.type === 'observation' && t.itemConcerne ? ' • ' + t.itemConcerne : ''}
+                                                ${t.type === 'evenement' && t.lieuPrecis ? ' • ' + t.lieuPrecis : ''}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold ${t.type === 'observation' ? 'bg-indigo-100 text-indigo-800' : 'bg-orange-100 text-orange-800'}">
+                                        ${t.type === 'observation' ? 'Observation' : 'Événement'}
+                                    </span>
+                                </div>
+
+                                ${t.type === 'observation' ? `
+                                    <div class="bg-gray-50 rounded-lg p-4 mb-3">
+                                        <p class="text-gray-800 whitespace-pre-line">${t.redactionLibre}</p>
+                                    </div>
+                                ` : `
+                                    <div class="space-y-3">
+                                        ${t.auteurPresume ? `<p class="text-sm"><strong>Auteur présumé :</strong> ${t.auteurPresume}</p>` : ''}
+                                        ${t.victimePresumee ? `<p class="text-sm"><strong>Victime présumée :</strong> ${t.victimePresumee}</p>` : ''}
+                                        ${t.temoins ? `<p class="text-sm"><strong>Témoins :</strong> ${t.temoins}</p>` : ''}
+                                        ${t.contexte ? `
+                                            <div class="bg-gray-50 rounded p-3">
+                                                <p class="text-xs font-semibold text-gray-600 mb-1">CONTEXTE</p>
+                                                <p class="text-sm">${t.contexte}</p>
+                                            </div>
+                                        ` : ''}
+                                        <div class="bg-orange-50 rounded p-3">
+                                            <p class="text-xs font-semibold text-orange-600 mb-1">DESCRIPTION DES FAITS</p>
+                                            <p class="text-sm whitespace-pre-line">${t.descriptionFaits}</p>
+                                        </div>
+                                        ${t.actionsImmediates ? `
+                                            <div class="bg-green-50 rounded p-3">
+                                                <p class="text-xs font-semibold text-green-600 mb-1">ACTIONS IMMÉDIATES</p>
+                                                <p class="text-sm whitespace-pre-line">${t.actionsImmediates}</p>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                `}
+
+                                <div class="flex items-center justify-between mt-4 pt-4 border-t">
+                                    <p class="text-sm text-gray-600"><strong>Auteur :</strong> ${t.auteur}</p>
+                                    ${t.partagerAvec && t.partagerAvec.length > 0 ? `
+                                        <div class="flex flex-wrap gap-1">
+                                            ${t.partagerAvec.map(d => `<span class="text-xs bg-gray-200 px-2 py-1 rounded">${d}</span>`).join('')}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
                 </div>
-              </div>
+            `;
+        }
 
-              <div className="bg-green-50 border-l-4 border-green-600 p-6 rounded-r-lg">
-                <h3 className="font-bold text-lg mb-3">Exemples de formulations</h3>
-                <div className="space-y-3 text-sm">
-                  <div>
-                    <p className="text-red-700 mb-1">Mauvais : Jean etait agressif</p>
-                    <p className="text-green-700">Bon : A 15h30, Jean a frappe du poing sur la table</p>
-                  </div>
-                  <div>
-                    <p className="text-red-700 mb-1">Mauvais : Marie ne fait jamais d efforts</p>
-                    <p className="text-green-700">Bon : Ce matin, Marie n a pas participe a l activite</p>
-                  </div>
+        function renderAide() {
+            return `
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Aide & Recommandations professionnelles</h2>
+                    
+                    <div class="space-y-6">
+                        <div class="bg-indigo-50 border-l-4 border-indigo-600 p-6 rounded-r-lg">
+                            <h3 class="font-bold text-lg mb-3">👁️ Observation quotidienne</h3>
+                            <p class="mb-3">L'observation est un outil essentiel du travail éducatif.</p>
+                            <p class="text-sm"><strong>✓ À faire :</strong></p>
+                            <ul class="list-disc ml-6 text-sm space-y-1 mb-3">
+                                <li>Décrire des faits observables</li>
+                                <li>Utiliser un langage neutre</li>
+                                <li>Situer dans le temps et l'espace</li>
+                            </ul>
+                            <p class="text-sm"><strong>✗ À éviter :</strong></p>
+                            <ul class="list-disc ml-6 text-sm space-y-1">
+                                <li>Les jugements de valeur</li>
+                                <li>Les interprétations</li>
+                                <li>Les généralisations</li>
+                            </ul>
+                        </div>
+
+                        <div class="bg-orange-50 border-l-4 border-orange-600 p-6 rounded-r-lg">
+                            <h3 class="font-bold text-lg mb-3">⚠️ Événement indésirable</h3>
+                            <p class="mb-3">Nécessite une traçabilité renforcée.</p>
+                            <p class="text-sm"><strong>Éléments obligatoires :</strong></p>
+                            <ul class="list-disc ml-6 text-sm space-y-1">
+                                <li>Heure exacte et lieu précis</li>
+                                <li>Identification des personnes</li>
+                                <li>Description chronologique</li>
+                                <li>Actions immédiates</li>
+                            </ul>
+                        </div>
+
+                        <div class="bg-green-50 border-l-4 border-green-600 p-6 rounded-r-lg">
+                            <h3 class="font-bold text-lg mb-3">Exemples</h3>
+                            <div class="space-y-3 text-sm">
+                                <div>
+                                    <p class="text-red-700">❌ Jean était agressif</p>
+                                    <p class="text-green-700">✅ À 15h30, Jean a frappé du poing sur la table</p>
+                                </div>
+                                <div>
+                                    <p class="text-red-700">❌ Marie ne fait jamais d'efforts</p>
+                                    <p class="text-green-700">✅ Ce matin, Marie n'a pas participé à l'activité</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
+            `;
+        }
 
-export default ArcturusApp;
+        // Event handlers
+        window.changeTab = (tab) => {
+            state.activeTab = tab;
+            render();
+        };
+
+        window.setType = (type) => {
+            state.formData.type = type;
+            render();
+        };
+
+        window.togglePartager = (dest) => {
+            if (state.formData.partagerAvec.includes(dest)) {
+                state.formData.partagerAvec = state.formData.partagerAvec.filter(d => d !== dest);
+            } else {
+                state.formData.partagerAvec.push(dest);
+            }
+        };
+
+        window.submitForm = () => {
+            const usager = document.getElementById('usager').value;
+            const date = document.getElementById('date').value;
+
+            if (state.formData.type === 'observation') {
+                const itemConcerne = document.getElementById('itemConcerne').value;
+                const redactionLibre = document.getElementById('redactionLibre').value;
+                
+                if (!usager || !itemConcerne || !redactionLibre) {
+                    alert('Veuillez remplir tous les champs obligatoires');
+                    return;
+                }
+                
+                state.formData.usager = usager;
+                state.formData.date = date;
+                state.formData.itemConcerne = itemConcerne;
+                state.formData.redactionLibre = redactionLibre;
+            } else {
+                const heure = document.getElementById('heure').value;
+                const lieuPrecis = document.getElementById('lieuPrecis').value;
+                const descriptionFaits = document.getElementById('descriptionFaits').value;
+                
+                if (!usager || !heure || !lieuPrecis || !descriptionFaits) {
+                    alert('Veuillez remplir tous les champs obligatoires');
+                    return;
+                }
+                
+                state.formData.usager = usager;
+                state.formData.date = date;
+                state.formData.heure = heure;
+                state.formData.lieuPrecis = lieuPrecis;
+                state.formData.auteurPresume = document.getElementById('auteurPresume').value;
+                state.formData.victimePresumee = document.getElementById('victimePresumee').value;
+                state.formData.temoins = document.getElementById('temoins').value;
+                state.formData.contexte = document.getElementById('contexte').value;
+                state.formData.descriptionFaits = descriptionFaits;
+                state.formData.actionsImmediates = document.getElementById('actionsImmediates').value;
+            }
+
+            const newTransmission = {
+                id: Date.now(),
+                ...state.formData,
+                auteur: state.currentUser,
+                dateCreation: new Date().toISOString()
+            };
+
+            state.transmissions.unshift(newTransmission);
+            saveToStorage();
+
+            state.formData = {
+                type: 'observation',
+                usager: '',
+                date: new Date().toISOString().split('T')[0],
+                heure: new Date().toTimeString().slice(0,5),
+                itemConcerne: '',
+                redactionLibre: '',
+                lieuPrecis: '',
+                auteurPresume: '',
+                victimePresumee: '',
+                temoins: '',
+                contexte: '',
+                descriptionFaits: '',
+                actionsImmediates: '',
+                partagerAvec: []
+            };
+
+            state.showSuccess = true;
+            render();
+            setTimeout(() => {
+                state.showSuccess = false;
+                state.activeTab = 'historique';
+                render();
+            }, 2000);
+        };
+
+        window.resetForm = () => {
+            state.formData = {
+                type: 'observation',
+                usager: '',
+                date: new Date().toISOString().split('T')[0],
+                heure: new Date().toTimeString().slice(0,5),
+                itemConcerne: '',
+                redactionLibre: '',
+                lieuPrecis: '',
+                auteurPresume: '',
+                victimePresumee: '',
+                temoins: '',
+                contexte: '',
+                descriptionFaits: '',
+                actionsImmediates: '',
+                partagerAvec: []
+            };
+            render();
+        };
+
+        window.updateSearch = (value) => {
+            state.searchTerm = value;
+            render();
+        };
+
+        window.updateFilter = (value) => {
+            state.filterType = value;
+            render();
+        };
+
+        // Initialize
+        loadFromStorage();
+        render();
+    </script>
+</body>
+</html>
